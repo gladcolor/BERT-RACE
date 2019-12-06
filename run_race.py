@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """BERT finetuning runner."""
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+# %env CUDA_VISIBLE_DEVICES=0
 import logging
 import os
 import argparse
@@ -23,7 +25,7 @@ from tqdm import tqdm, trange
 import csv
 import glob 
 import json
-import apex
+# import apex
 
 import numpy as np
 import torch
@@ -40,6 +42,7 @@ logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(messa
                     level = logging.INFO)
 logger = logging.getLogger(__name__)
 
+CUDA_VISIBLE_DEVICES=0
 
 class RaceExample(object):
     """A single training/test example for the RACE dataset."""
@@ -115,8 +118,9 @@ class InputFeatures(object):
 ## paths is a list containing all paths
 def read_race_examples(paths):
     examples = []
+    print(paths)
     for path in paths:
-        filenames = glob.glob(path+"/*txt")
+        filenames = glob.glob(path+"/*json")
         for filename in filenames:
             with open(filename, 'r', encoding='utf-8') as fpr:
                 data_raw = json.load(fpr)
@@ -376,6 +380,7 @@ def main():
     if args.do_train:
         train_dir = os.path.join(args.data_dir, 'train')
         train_examples = read_race_examples([train_dir+'/high', train_dir+'/middle'])
+        # print("train_examples: ", train_examples)
         
         num_train_steps = int(
             len(train_examples) / args.train_batch_size / args.gradient_accumulation_steps * args.num_train_epochs)
@@ -387,7 +392,8 @@ def main():
     if args.fp16:
         model.half()
     model.to(device)
-    if args.local_rank != -1:
+    # if args.local_rank != -1:
+    if False:
         try:
             from apex.parallel import DistributedDataParallel as DDP
         except ImportError:
