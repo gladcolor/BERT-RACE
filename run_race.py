@@ -419,11 +419,11 @@ def main():
     if args.local_rank != -1:
         t_total = t_total // torch.distributed.get_world_size()
     if args.fp16:
-        try:
-            from apex.optimizers import FP16_Optimizer
-            from apex.optimizers import FusedAdam
-        except ImportError:
-            raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
+        # try:
+        #     from apex.optimizers import FP16_Optimizer
+        #     from apex.optimizers import FusedAdam
+        # except ImportError:
+        #     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
 
         optimizer = FusedAdam(optimizer_grouped_parameters,
                               lr=args.learning_rate,
@@ -483,6 +483,7 @@ def main():
                     optimizer.backward(loss)
                 else:
                     loss.backward()
+                lr_this_step = 0
                 if (step + 1) % args.gradient_accumulation_steps == 0:
                     # modify learning rate with special warm up BERT uses
                     lr_this_step = args.learning_rate * warmup_linear(global_step/t_total, args.warmup_proportion)
@@ -493,7 +494,7 @@ def main():
                     global_step += 1
 
                 if global_step%100 == 0:
-                    logger.info("Training loss: {}, global step: {}".format(tr_loss/nb_tr_steps, global_step))
+                    logger.info("Training loss: {}, global step: {}, lr_this_step: {}".format(tr_loss/nb_tr_steps, global_step, lr_this_step))
 
 
             ## evaluate on dev set
@@ -552,12 +553,14 @@ def main():
                         logger.info("  %s = %s", key, str(result[key]))
                         writer.write("%s = %s\n" % (key, str(result[key])))
 
-
+            model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+            output_model_file = os.path.join(args.output_dir, "albert_" + str(ep) + "pytorch_model.bin")
+            torch.save(model_to_save.state_dict(), output_model_file)
 
 
     # Save a trained model
     model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-    output_model_file = os.path.join(args.output_dir, "pytorch_model.bin")
+    output_model_file = os.path.join(args.output_dir, "albert_pytorch_model.bin")
     torch.save(model_to_save.state_dict(), output_model_file)
 
 
